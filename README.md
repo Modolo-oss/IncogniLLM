@@ -40,7 +40,7 @@ IncogniLLM acts as a stateless intermediary between the User (or Agent) and the 
 - **Backend**: Node.js, Express, TypeScript, Ethers.js.
 - **Frontend**: React, Vite, Tailwind CSS v4, Framer Motion.
 - **Blockchain**: Solidity, Hardhat, Capx Mainnet.
-- **AI**: OpenRouter (Access to GPT-4, Claude 3.5, etc.).
+- **AI**: Anthropic (Claude 3.5 Sonnet, etc.).
 
 ## 📊 Workflow Diagram
 
@@ -50,7 +50,7 @@ sequenceDiagram
     participant Frontend as IncogniLLM UI
     participant Gateway as IncogniLLM Gateway
     participant PII as PII Scrubber
-    participant LLM as LLM Provider (OpenRouter)
+    participant LLM as Anthropic (Claude)
     participant Chain as Capx Mainnet
 
     User->>Frontend: Deposit USDC (Private Note)
@@ -98,7 +98,7 @@ sequenceDiagram
     Create a `.env` file in the root directory:
     ```text
     PORT=3000
-    OPENROUTER_API_KEY=your_key
+    ANTHROPIC_API_KEY=your_key
     CAPX_MAINNET_RPC=https://rpc.capx.ai
     PRIVATE_KEY=your_wallet_private_key
     ATTESTATION_CONTRACT_ADDRESS=0x000EB5A3D2c2ceF6cdBa182fC19faE9b88e91c4A
