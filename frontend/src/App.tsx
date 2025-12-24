@@ -14,7 +14,6 @@ import {
   Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import CryptoJS from 'crypto-js';
 
 interface Message {
   id: string;
@@ -167,8 +166,8 @@ const App: React.FC = () => {
                   </div>
 
                   <div className={`p-4 rounded-2xl ${msg.role === 'user'
-                      ? 'bg-accent/10 border border-accent/20 text-accent'
-                      : 'bg-stealth-gray border border-white/5'
+                    ? 'bg-accent/10 border border-accent/20 text-accent'
+                    : 'bg-stealth-gray border border-white/5'
                     }`}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   </div>
@@ -228,8 +227,8 @@ const App: React.FC = () => {
               type="submit"
               disabled={isLoading || !input.trim() || balance <= 0}
               className={`absolute right-2 top-2 bottom-2 px-4 rounded-xl flex items-center justify-center transition-all ${isLoading || !input.trim() || balance <= 0
-                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                  : 'bg-accent text-black hover:bg-accent-hover active:scale-95'
+                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                : 'bg-accent text-black hover:bg-accent-hover active:scale-95'
                 }`}
             >
               {isLoading ? <RefreshCw className="animate-spin" size={20} /> : <Send size={20} />}

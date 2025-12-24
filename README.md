@@ -116,6 +116,16 @@ sequenceDiagram
     npm run dev
     ```
 
+### Deployment to Replit
+
+1.  **Import the repository** to Replit.
+2.  **Set Secrets**: Go to the "Secrets" tab in Replit and add:
+    - `ANTHROPIC_API_KEY`
+    - `CAPX_MAINNET_RPC`
+    - `PRIVATE_KEY`
+    - `ATTESTATION_CONTRACT_ADDRESS`
+3.  **Run**: Click the "Run" button. Replit will automatically use the `.replit` and `replit.nix` configurations to build and start the server.
+
 ---
 
 ## 📜 Smart Contract
