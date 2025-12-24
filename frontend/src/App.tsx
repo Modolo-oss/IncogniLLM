@@ -16,7 +16,9 @@ import {
   Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PrivacySDK, Note } from '@prxvt/sdk';
+import { PrivacySDK, type Note } from '@prxvt/sdk';
+import { createWalletClient, custom } from 'viem';
+import { base } from 'viem/chains';
 
 interface Message {
   id: string;
@@ -36,6 +38,7 @@ const App: React.FC = () => {
   const [showScrubbed, setShowScrubbed] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [privateKey, setPrivateKey] = useState('');
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [agentId, setAgentId] = useState('0x85c992ec27DD9F9fd8421413aa3992EA69434259');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -49,6 +52,28 @@ const App: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const connectWallet = async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const [address] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        setWalletAddress(address);
+
+        const walletClient = createWalletClient({
+          account: address,
+          chain: base,
+          transport: custom(window.ethereum)
+        });
+
+        await sdk.current.connect(walletClient);
+        console.log('Wallet connected:', address);
+      } catch (error) {
+        console.error('Failed to connect wallet:', error);
+      }
+    } else {
+      alert('Please install MetaMask or Rabby wallet!');
+    }
+  };
 
   // Load saved note on mount
   useEffect(() => {
@@ -74,17 +99,26 @@ const App: React.FC = () => {
   };
 
   const handleDeposit = async () => {
-    if (!privateKey) {
-      setShowKeyInput(true);
-      alert("Please enter a private key to sign the gasless deposit.");
-      return;
-    }
-
     setIsLoading(true);
     try {
       const amount = 0.1; // Small amount for demo
-      console.log(`Depositing ${amount} USDC...`);
-      const note = await sdk.current.depositFast(amount, privateKey);
+      let note;
+
+      if (walletAddress) {
+        // Use connected wallet extension (MetaMask/Rabby)
+        console.log(`Depositing ${amount} USDC via Wallet Extension...`);
+        note = await sdk.current.deposit(amount, ""); // SDK will use connected wallet
+      } else if (privateKey) {
+        // Fallback to manual private key
+        console.log(`Depositing ${amount} USDC via Private Key...`);
+        note = await sdk.current.depositFast(amount, privateKey);
+      } else {
+        setIsLoading(false);
+        setShowKeyInput(true);
+        alert("Please connect your wallet or enter a private key.");
+        return;
+      }
+
       setCurrentNote(note);
       setBalance(amount);
       localStorage.setItem('incogni_note_real', JSON.stringify(note));
@@ -179,20 +213,35 @@ const App: React.FC = () => {
 
         <div className="flex items-center gap-4">
           <div className="hidden md:flex flex-col items-end mr-2">
-            <span className="text-[10px] text-gray-500 uppercase font-bold">Agent ID (ERC-8004)</span>
-            <span className="text-xs font-mono text-gray-400">{agentId.substring(0, 10)}...</span>
+            <span className="text-[10px] text-gray-500 uppercase font-bold">
+              {walletAddress ? 'Connected Wallet' : 'Agent ID (ERC-8004)'}
+            </span>
+            <span className="text-xs font-mono text-gray-400">
+              {walletAddress ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(38)}` : `${agentId.substring(0, 10)}...`}
+            </span>
           </div>
           <div className="flex flex-col items-end">
             <span className="text-[10px] text-gray-500 uppercase font-bold">ZK-Balance</span>
             <span className="text-accent font-mono font-bold">{balance.toFixed(4)} USDC</span>
           </div>
-          <button
-            onClick={() => setShowKeyInput(!showKeyInput)}
-            className={`p-2 rounded-xl transition-all active:scale-95 ${showKeyInput ? 'bg-accent text-black' : 'bg-stealth-gray text-gray-400'}`}
-            title="Wallet Settings"
-          >
-            <Key size={20} />
-          </button>
+
+          {!walletAddress ? (
+            <button
+              onClick={connectWallet}
+              className="bg-accent hover:bg-accent-hover text-black px-4 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-2 font-bold text-sm"
+            >
+              <Wallet size={18} /> Connect
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowKeyInput(!showKeyInput)}
+              className={`p-2 rounded-xl transition-all active:scale-95 ${showKeyInput ? 'bg-accent text-black' : 'bg-stealth-gray text-gray-400'}`}
+              title="Settings"
+            >
+              <Key size={20} />
+            </button>
+          )}
+
           <button
             onClick={handleDeposit}
             disabled={isLoading}
@@ -275,8 +324,8 @@ const App: React.FC = () => {
                   </div>
 
                   <div className={`p-4 rounded-2xl ${msg.role === 'user'
-                      ? 'bg-accent/10 border border-accent/20 text-accent'
-                      : 'bg-stealth-gray border border-white/5'
+                    ? 'bg-accent/10 border border-accent/20 text-accent'
+                    : 'bg-stealth-gray border border-white/5'
                     }`}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   </div>
@@ -353,8 +402,8 @@ const App: React.FC = () => {
               type="submit"
               disabled={isLoading || !input.trim() || balance <= 0}
               className={`absolute right-2 top-2 bottom-2 px-4 rounded-xl flex items-center justify-center transition-all ${isLoading || !input.trim() || balance <= 0
-                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                  : 'bg-accent text-black hover:bg-accent-hover active:scale-95'
+                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                : 'bg-accent text-black hover:bg-accent-hover active:scale-95'
                 }`}
             >
               {isLoading ? <RefreshCw className="animate-spin" size={20} /> : <Send size={20} />}
