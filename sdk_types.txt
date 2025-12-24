@@ -1,0 +1,74 @@
+/**
+ * Privacy SDK - Core class for private x402 payments
+ */
+import type { WalletClient } from 'viem';
+import type { PrivacySDKConfig, Note, PaymentResult } from './types';
+/**
+ * Main Privacy SDK class
+ */
+export declare class PrivacySDK {
+    private config;
+    private chainConfig;
+    private bundlerUrl;
+    private walletClient?;
+    private currentNote?;
+    private wasmPath;
+    private zkeyPath;
+    private attestorUrl?;
+    constructor(config?: PrivacySDKConfig);
+    /**
+     * Connect wallet client (for browser/UI integration)
+     */
+    connect(walletClient: WalletClient): Promise<void>;
+    /** Allowed deposit amounts in USDC */
+    static readonly ALLOWED_AMOUNTS: number[];
+    /**
+     * Validate deposit amount
+     */
+    private validateDepositAmount;
+    /**
+     * Deposit USDC to create a private note (uses gasless ERC-3009 signature)
+     * @param amount - Amount in USDC. Must be one of: 0.01, 0.1, 1, 10, 100
+     * @param privateKey - Private key for signing
+     */
+    deposit(amount: number, privateKey: string): Promise<Note>;
+    /**
+     * Legacy deposit using approve + deposit (requires ETH for 2 transactions)
+     * @deprecated Use deposit() instead - it's gasless and faster
+     * @param amount - Amount in USDC. Must be one of: 0.01, 0.1, 1, 10, 100
+     * @param privateKey - Optional private key (if not using connect())
+     */
+    depositLegacy(amount: number, privateKey?: string): Promise<Note>;
+    /**
+     * Fast deposit using ERC-3009 receiveWithAuthorization (no approve TX needed!)
+     * This is ~50% faster than regular deposit (10s vs 20s)
+     * @param amount - Amount in USDC. Must be one of: 0.01, 0.1, 1, 10, 100
+     * @param privateKey - Private key for signing
+     */
+    depositFast(amount: number, privateKey: string): Promise<Note>;
+    /**
+     * Get balance from note
+     */
+    getBalance(note: Note): Promise<number>;
+    /**
+     * Make a private payment (internal - used by x402 wrappers)
+     */
+    makePayment(note: Note, recipient: string, amount: number): Promise<PaymentResult>;
+    /**
+     * Get current note (updated after payments)
+     */
+    getUpdatedNote(): Note | undefined;
+    /**
+     * Set current note (for loading saved notes)
+     */
+    setNote(note: Note): void;
+    /**
+     * Wrap fetch with automatic x402 payment handling
+     * Usage:
+     *   sdk.setNote(myNote);
+     *   const fetchWithPay = sdk.wrapFetch(fetch);
+     *   const response = await fetchWithPay('https://api.example.com/paid');
+     *   const updatedNote = sdk.getUpdatedNote(); // Save this!
+     */
+    wrapFetch(baseFetch: typeof fetch): typeof fetch;
+}

@@ -10,13 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@prxvt/sdk": "^1.0.2",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.2",
     "crypto-js": "^4.2.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "viem": "^2.43.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

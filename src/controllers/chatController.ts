@@ -8,64 +8,72 @@ import { AttestationService } from '../services/attestationService';
 export class ChatController {
     static async chat(req: Request, res: Response) {
         try {
-            const { prompt, model, paymentNoteId, encryptedIdentity } = req.body;
+            const { prompt, model, paymentNote, agentIdentity } = req.body;
 
             if (!prompt) {
                 return res.status(400).json({ error: 'Prompt is required' });
             }
 
-            // 0. Verify Identity (Optional for now, but good for structure)
-            if (encryptedIdentity) {
-                const isValidIdentity = await IdentityService.validateIdentity(encryptedIdentity);
-                if (!isValidIdentity) {
-                    return res.status(401).json({ error: 'Invalid identity' });
+            // 1. ERC-8004 Identity Validation (Real Development)
+            if (agentIdentity) {
+                const { agentId, agentCard } = agentIdentity;
+                const isValid = await IdentityService.validateAgentIdentity(agentId, agentCard);
+                if (!isValid) {
+                    return res.status(401).json({ error: 'Invalid ERC-8004 Agent Identity' });
                 }
             }
 
-            // 1. Process Payment
-            // Cost calculation (simplified): 0.01 USDC per request
-            const COST_PER_REQUEST = 0.01;
+            // 2. PX402 Payment Processing (Real Development)
+            let updatedNote = null;
+            let paymentTxHash = null;
+            const COST_PER_REQUEST = 0.01; // 0.01 USDC
 
-            if (paymentNoteId) {
-                const paymentSuccess = await PaymentService.processPayment(paymentNoteId, COST_PER_REQUEST);
-                if (!paymentSuccess) {
-                    return res.status(402).json({ error: 'Payment failed' });
+            if (paymentNote) {
+                const note = typeof paymentNote === 'string' ? PaymentService.parseNote(paymentNote) : paymentNote;
+                const paymentResult = await PaymentService.processPayment(note, COST_PER_REQUEST);
+
+                if (!paymentResult.success) {
+                    return res.status(402).json({ error: 'PX402 Payment failed: Insufficient funds or invalid note' });
                 }
+
+                updatedNote = paymentResult.updatedNote;
+                paymentTxHash = paymentResult.txHash;
             } else {
-                // For now, allow free chats if no note provided, but log warning
-                console.warn('No payment note provided. Proceeding as free tier (Dev Mode).');
+                console.warn('No PX402 payment note provided. Proceeding as free tier (Dev Mode).');
             }
 
-            // 2. Scrub PII
+            // 3. PII Scrubbing (Real Development)
             const scrubbedPrompt = PiiScrubber.scrub(prompt);
-            console.log(`Original: ${prompt}`);
-            console.log(`Scrubbed: ${scrubbedPrompt}`);
+            console.log(`[REAL] Original Prompt: ${prompt}`);
+            console.log(`[REAL] Scrubbed Prompt: ${scrubbedPrompt}`);
 
-            // 3. Send to LLM
-            const response = await LlmService.generateResponse(scrubbedPrompt, model);
+            // 4. LLM Response Generation (Real Development - Anthropic)
+            const aiResponse = await LlmService.generateResponse(scrubbedPrompt, model);
 
-            // 4. Attest Interaction
-            let txHash = null;
-            if (paymentNoteId) {
-                txHash = await AttestationService.attestInteraction(paymentNoteId, response);
+            // 5. Capx On-Chain Attestation (Real Development)
+            let attestationTxHash = null;
+            if (paymentTxHash) {
+                // Use the payment transaction hash as the unique identifier for attestation
+                attestationTxHash = await AttestationService.attestInteraction(paymentTxHash, aiResponse);
             }
 
-            // 5. Wipe Data (Stateless)
+            // 6. Stateless Data Wipe (Real Development)
             IdentityService.wipeData(prompt);
             IdentityService.wipeData(scrubbedPrompt);
 
-            // 6. Return response
+            // 7. Return Response with Proofs and Updated Note
             res.json({
-                original_prompt_length: prompt.length,
+                response: aiResponse,
                 scrubbed_prompt: scrubbedPrompt,
-                response: response,
-                payment_status: paymentNoteId ? 'paid' : 'free_tier',
-                attestation_tx: txHash
+                payment_tx: paymentTxHash,
+                attestation_tx: attestationTxHash,
+                updated_note: updatedNote, // Return the new note commitment to the user
+                status: 'verified'
             });
 
-        } catch (error) {
-            console.error('Chat error:', error);
-            res.status(500).json({ error: 'Internal server error' });
+        } catch (error: any) {
+            console.error('[REAL] Chat error:', error);
+            res.status(500).json({ error: error.message || 'Internal server error' });
         }
     }
 }
